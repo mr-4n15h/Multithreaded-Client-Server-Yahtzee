@@ -8,7 +8,7 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Arrays;
 
-public class Player  {
+public class Player extends Thread {
     private PlayerScoreBoard scoreBoard;
     private Socket socket;
     private ObjectOutputStream output;
@@ -96,6 +96,7 @@ public class Player  {
 
     public void setPlayerName(String name) {
         this.playerName = name;
+        setName(playerName);
     }
 
     public String getPlayerName() {

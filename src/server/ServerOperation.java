@@ -13,9 +13,11 @@ import java.util.List;
 
 class ServerOperation {
     private List<Player> players;
+    private PlayerTurnManager playerTurnManager;
 
     ServerOperation(List<Player> players) {
         this.players = players;
+        playerTurnManager = new PlayerTurnManager(players);
     }
 
     void welcomePlayers() {
@@ -52,14 +54,20 @@ class ServerOperation {
     }
 
     void grantPlayerTurn(Player player) {
-        player.sendMessage(ServerOperationConstants.PLAYER_TURN);
-        System.out.println(ServerOperationConstants.PLAYER_TURN + " to " + player.getPlayerName()); // Inform player that it is their turn
-        final String REPLY_FROM_CLIENT = player.readMessage();
-        System.out.println(REPLY_FROM_CLIENT + " from " + player.getPlayerName());     // This is the response from server
-        if(REPLY_FROM_CLIENT.equals(ServerOperationConstants.PLAYER_REQUEST_TURN)) {
-            player.sendMessage(ServerOperationConstants.PLAYER_GRANTED_TURN);
-            System.out.println(ServerOperationConstants.PLAYER_GRANTED_TURN + " to " + player.getPlayerName());
-            letPlayerRerollDices(player);
+        try {
+            playerTurnManager.requestTurn();
+            player.sendMessage(ServerOperationConstants.PLAYER_TURN);
+            System.out.println(ServerOperationConstants.PLAYER_TURN + " to " + player.getPlayerName()); // Inform player that it is their turn
+            final String REPLY_FROM_CLIENT = player.readMessage();
+            System.out.println(REPLY_FROM_CLIENT + " from " + player.getPlayerName());     // This is the response from server
+            if(REPLY_FROM_CLIENT.equals(ServerOperationConstants.PLAYER_REQUEST_TURN)) {
+                player.sendMessage(ServerOperationConstants.PLAYER_GRANTED_TURN);
+                System.out.println(ServerOperationConstants.PLAYER_GRANTED_TURN + " to " + player.getPlayerName());
+                letPlayerRerollDices(player);
+            }
+            playerTurnManager.releaseTurn();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 

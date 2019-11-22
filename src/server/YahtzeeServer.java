@@ -120,8 +120,15 @@ public class YahtzeeServer {
         return startGameOrNotOption.equals("y");
     }
 
+    private void startPlayers() {
+        for(Player player : players) {
+            player.start();
+        }
+    }
+
     private synchronized void startGame() {
         int totalAcks = 0;
+        startPlayers();
         for(int roundNumber = 1; roundNumber <= 13; ) {
             // Send the round number to all the players
             broadcast.broadcastPlayersRoundNumber(roundNumber);
