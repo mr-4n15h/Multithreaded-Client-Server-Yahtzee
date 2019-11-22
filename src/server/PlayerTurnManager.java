@@ -7,25 +7,33 @@ import java.util.List;
 public class PlayerTurnManager {
     private boolean isAccessing;
     private List<Player> players;
+    private int playerIndex;
 
     public PlayerTurnManager(List<Player> players) {
         this.isAccessing = false;
         this.players = players;
     }
 
+    synchronized void increasePlayerIndex() {
+        playerIndex = playerIndex == players.size() - 1 ? 0 : ++playerIndex;
+    }
+
+    private synchronized Player getPlayer() {
+        return players.get(playerIndex);
+    }
+
     synchronized void requestTurn() throws InterruptedException {
-        Thread currentT = Thread.currentThread();
         while(isAccessing) {
             wait();
         }
         isAccessing = true;
-        System.out.println(currentT.getName() + " got a lock!");
+        System.out.println(getPlayer().getPlayerName() + " got a lock!");
+        increasePlayerIndex();
     }
 
     synchronized void releaseTurn() {
-        Thread currentT = Thread.currentThread();
         isAccessing = false;
         notifyAll();
-        System.out.println(currentT.getName() + " released the lock!");
+        System.out.println(getPlayer().getPlayerName() + " released the lock!");
     }
 }
