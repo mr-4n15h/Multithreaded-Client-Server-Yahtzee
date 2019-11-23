@@ -120,16 +120,11 @@ public class YahtzeeServer extends Thread {
 
     private void startPlayers() {
         turnManager = new TurnManager(players.size());
-
         // Start the thread of each player
         for(Player player : players) {
             player.setTurnManager(turnManager);
             player.start();
         }
-
-        // Pass the list of players to PlayerTurnManager
-        // This class will deal with player turns in a synchronised manner using an index
-        //playerTurnManager = new PlayerTurnManager(players);
     }
 
     private synchronized void startGame() {
@@ -156,6 +151,7 @@ public class YahtzeeServer extends Thread {
                 System.out.println("Synchronised player index number: " + turnManager.getPlayerTurn());
                 // Let the player have their turn
                 try {
+
                     // Lock to prevent from multiple threads accessing and modifying the player index
                     player.getTurnManager().requestTurn();
                     // Let the player have their turn

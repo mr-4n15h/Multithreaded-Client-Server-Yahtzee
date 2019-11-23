@@ -59,7 +59,7 @@ public class YahtzeeClient extends Thread {
             switch(operationFromServer) {
                 case ServerOperationConstants.ROUND_NUMBER:
                     String roundNumber = (String) input.readObject();
-                    System.out.println("================== [ Round " + roundNumber + " of 13" + " ] ==================");
+                    System.out.println("==================[ Round " + roundNumber + " of 13" + " ]==================");
                     break;
                 case ServerOperationConstants.OTHER_PLAYER_TURN:
                     String playerTurnName = (String) input.readObject();
