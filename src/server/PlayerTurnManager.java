@@ -4,22 +4,25 @@ import client.Player;
 
 import java.util.List;
 
-public class PlayerTurnManager {
+class PlayerTurnManager {
     private boolean isAccessing;
     private List<Player> players;
     private int playerIndex;
 
-    public PlayerTurnManager(List<Player> players) {
+    PlayerTurnManager(List<Player> players) {
         this.isAccessing = false;
         this.players = players;
     }
-
-    synchronized void increasePlayerIndex() {
+    private synchronized void increasePlayerIndex() {
         playerIndex = playerIndex == players.size() - 1 ? 0 : ++playerIndex;
     }
 
-    private synchronized Player getPlayer() {
+    synchronized Player getPlayer() {
         return players.get(playerIndex);
+    }
+
+    synchronized int getPlayerIndex() {
+        return playerIndex;
     }
 
     synchronized void requestTurn() throws InterruptedException {
@@ -28,12 +31,20 @@ public class PlayerTurnManager {
         }
         isAccessing = true;
         System.out.println(getPlayer().getPlayerName() + " got a lock!");
-        increasePlayerIndex();
+        // Print the name of the players that are waiting for lock
+        int currentPlayerIndex = playerIndex;
+        for(int i = 0; i < players.size(); i++) {
+            if(i != currentPlayerIndex) {
+                String playerWaitingForLock = players.get(i).getPlayerName();
+                System.out.println(playerWaitingForLock + " is waiting for lock! ");
+            }
+        }
     }
 
     synchronized void releaseTurn() {
         isAccessing = false;
         notifyAll();
         System.out.println(getPlayer().getPlayerName() + " released the lock!");
+        increasePlayerIndex();
     }
 }

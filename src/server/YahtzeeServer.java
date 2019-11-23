@@ -23,7 +23,7 @@ import java.util.Scanner;
 // TODO: After suspending the threads, create a mechanism that avoid the deadlock
 // TODO: Sketch the architecture and the protocols for the game (e.g. client requesting to have their turn)
 
-public class YahtzeeServer {
+public class YahtzeeServer extends Thread {
     private ServerSocket socket;
     private int playerNumber = 0;
     private Scanner inputKeyboard;
@@ -34,6 +34,7 @@ public class YahtzeeServer {
     private boolean startGame;
     private Broadcast broadcast;
     private ServerOperation serverOperation;
+    private PlayerTurnManager playerTurnManager;
 
     private YahtzeeServer(int portNumber) throws IOException {
         // Handle only up to 50 connection requests
@@ -41,6 +42,11 @@ public class YahtzeeServer {
         System.out.println("Yahtzee server initialised at port " + portNumber);
         this.inputKeyboard = new Scanner(System.in);
         this.players = Collections.synchronizedList(new ArrayList<>());
+        start();
+    }
+
+    @Override
+    public synchronized void start() {
         runServer();
     }
 
@@ -121,9 +127,14 @@ public class YahtzeeServer {
     }
 
     private void startPlayers() {
+        // Start the thread of each player
         for(Player player : players) {
             player.start();
         }
+
+        // Pass the list of players to PlayerTurnManager
+        // This class will deal with player turns in a synchronised manner using an index
+        playerTurnManager = new PlayerTurnManager(players);
     }
 
     private synchronized void startGame() {
@@ -135,32 +146,43 @@ public class YahtzeeServer {
             broadcast.broadcastDicesRolledByPlayers(serverOperation.getPlayersDicesRolled());
             serverOperation.sendPlayersScoreBoard();
 
-            for(Player player : players) {
+            while(true) {
+                // Get the player from the PlayerTurnManager
+                Player player = playerTurnManager.getPlayer();
+                //for(Player player : players) {
                 // Inform each player whose turn it is right now
                 broadcast.broadcastMessage(player, ServerOperationConstants.OTHER_PLAYER_TURN);
                 broadcast.broadcastMessage(player, player.getPlayerName());
 
                 System.out.println("-----------Begin Transaction-----------");
-
+                System.out.println("Synchronised player index number: " + playerTurnManager.getPlayerIndex());
                 // Let the player have their turn
-                serverOperation.grantPlayerTurn(player);
+                try {
+                    playerTurnManager.requestTurn();
+                    serverOperation.grantPlayerTurn(player);
+                    playerTurnManager.releaseTurn();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
 
                 // Block until the user sends the PLAYER_FINISH_TURN message to the server
                 String messageFromClient = player.readMessage();
                 System.out.println(messageFromClient + " from " + player.getPlayerName());
-                if(messageFromClient.equals(ServerOperationConstants.PLAYER_FINISH_TURN)) {
+                if (messageFromClient.equals(ServerOperationConstants.PLAYER_FINISH_TURN)) {
                     totalAcks++;
                     System.out.println("-----------End Transaction-----------\n");
                 }
 
-                if(totalAcks == players.size()) {
+                if (totalAcks == players.size()) {
                     System.out.println("Got all acks for round " + roundNumber);
                     totalAcks = 0;
                     broadcast.broadcastPlayerScoreTotal();
                     roundNumber++;
+                    break;
                 }
             }
         }
+       // }
         broadcast.declareWinner();
     }
 
