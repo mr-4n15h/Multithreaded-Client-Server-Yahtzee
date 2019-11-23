@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.InputMismatchException;
 import java.util.Scanner;
 
-public class YahtzeeClient extends Thread {
+public class YahtzeeClient {
     private ObjectInputStream input;
     private ObjectOutputStream output;
     private Scanner inputKeyboard;
@@ -27,11 +27,11 @@ public class YahtzeeClient extends Thread {
         input = new ObjectInputStream(socketConnection.getInputStream());
         inputKeyboard = new Scanner(System.in);
         categoriesToScore = new ArrayList<>();
-        start();
+        runClient();
     }
 
-    @Override
-    public void run() {
+
+    public void runClient() {
         try {
             printWelcomeMessage();
             while(!gameHasEnded) {

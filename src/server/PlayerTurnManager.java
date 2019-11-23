@@ -4,6 +4,8 @@ import client.Player;
 
 import java.util.List;
 
+@Deprecated
+// Use TurnManager
 class PlayerTurnManager {
     private boolean isAccessing;
     private List<Player> players;

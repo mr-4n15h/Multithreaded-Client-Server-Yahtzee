@@ -38,7 +38,7 @@ public class YahtzeeServer extends Thread {
     }
 
     @Override
-    public synchronized void start() {
+    public void run() {
         runServer();
     }
 
@@ -150,17 +150,10 @@ public class YahtzeeServer extends Thread {
                 System.out.println("-----------Begin Transaction-----------");
                 System.out.println("Synchronised player index number: " + turnManager.getPlayerTurn());
                 // Let the player have their turn
-                try {
+                // Lock to prevent from multiple threads accessing and modifying the player index
+                // Let the player have their turn
+                serverOperation.grantPlayerTurn(player);
 
-                    // Lock to prevent from multiple threads accessing and modifying the player index
-                    player.getTurnManager().requestTurn();
-                    // Let the player have their turn
-                    serverOperation.grantPlayerTurn(player);
-                    // Player finished their turn
-                    player.getTurnManager().releaseTurn();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
 
                 // The user sends the PLAYER_FINISH_TURN message to the server
                 String messageFromClient = player.readMessage();

@@ -21,9 +21,11 @@ public class TurnManager {
     }
 
     public synchronized void requestTurn() throws InterruptedException {
+        Thread me = Thread.currentThread();
         while(isAccessing) {
             wait();
         }
+        System.out.println(me.getName());
         isAccessing = true;
     }
 

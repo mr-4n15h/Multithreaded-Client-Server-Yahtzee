@@ -40,7 +40,6 @@ public class Player extends Thread {
         return turnManager;
     }
 
-
     public String getRolledDices() {
         dicesRolled = dices.rollDices();
         return Arrays.toString(dicesRolled);
