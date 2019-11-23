@@ -1,7 +1,6 @@
 package client;
 
 import score.ScoreCheck;
-
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -18,6 +17,7 @@ public class Player extends Thread {
     private int[] dicesRolled;
     private Dices dices;
     private ScoreCheck scoreCheck;
+    private TurnManager turnManager;
 
     public Player(Socket socket) {
         this.socket = socket;
@@ -31,6 +31,15 @@ public class Player extends Thread {
         this.output = output;
         this.input = input;
     }
+
+    public void setTurnManager(TurnManager turnManager) {
+        this.turnManager = turnManager;
+    }
+
+    public TurnManager getTurnManager() {
+        return turnManager;
+    }
+
 
     public String getRolledDices() {
         dicesRolled = dices.rollDices();

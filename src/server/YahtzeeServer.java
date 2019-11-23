@@ -1,6 +1,7 @@
 package server;
 
 import client.Player;
+import client.TurnManager;
 import constants.ServerOperationConstants;
 
 import java.io.IOException;
@@ -24,7 +25,8 @@ public class YahtzeeServer extends Thread {
     private boolean startGame;
     private Broadcast broadcast;
     private ServerOperation serverOperation;
-    private PlayerTurnManager playerTurnManager;
+    //private PlayerTurnManager playerTurnManager;
+    private TurnManager turnManager;
 
     private YahtzeeServer(int portNumber) throws IOException {
         // Handle only up to 50 connection requests
@@ -117,14 +119,17 @@ public class YahtzeeServer extends Thread {
     }
 
     private void startPlayers() {
+        turnManager = new TurnManager(players.size());
+
         // Start the thread of each player
         for(Player player : players) {
+            player.setTurnManager(turnManager);
             player.start();
         }
 
         // Pass the list of players to PlayerTurnManager
         // This class will deal with player turns in a synchronised manner using an index
-        playerTurnManager = new PlayerTurnManager(players);
+        //playerTurnManager = new PlayerTurnManager(players);
     }
 
     private synchronized void startGame() {
@@ -137,25 +142,31 @@ public class YahtzeeServer extends Thread {
             serverOperation.sendPlayersScoreBoard();
 
             while(true) {
-                // Get the player from the PlayerTurnManager
-                Player player = playerTurnManager.getPlayer();
-                //for(Player player : players) {
+                // Get the index of whose turn it is now
+                int playerTurnIndex = turnManager.getPlayerTurn();
+
+                // The player who will communicate with the server
+                Player player = players.get(playerTurnIndex);
+
                 // Inform each player whose turn it is right now
                 broadcast.broadcastMessage(player, ServerOperationConstants.OTHER_PLAYER_TURN);
                 broadcast.broadcastMessage(player, player.getPlayerName());
 
                 System.out.println("-----------Begin Transaction-----------");
-                System.out.println("Synchronised player index number: " + playerTurnManager.getPlayerIndex());
+                System.out.println("Synchronised player index number: " + turnManager.getPlayerTurn());
                 // Let the player have their turn
                 try {
-                    playerTurnManager.requestTurn();
+                    // Lock to prevent from multiple threads accessing and modifying the player index
+                    player.getTurnManager().requestTurn();
+                    // Let the player have their turn
                     serverOperation.grantPlayerTurn(player);
-                    playerTurnManager.releaseTurn();
+                    // Player finished their turn
+                    player.getTurnManager().releaseTurn();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
 
-                // Block until the user sends the PLAYER_FINISH_TURN message to the server
+                // The user sends the PLAYER_FINISH_TURN message to the server
                 String messageFromClient = player.readMessage();
                 System.out.println(messageFromClient + " from " + player.getPlayerName());
                 if (messageFromClient.equals(ServerOperationConstants.PLAYER_FINISH_TURN)) {
