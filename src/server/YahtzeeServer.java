@@ -13,16 +13,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
-// Only display categories that you can score in!
-
-// TODO: THE MESSAGES SENT IS IN WRONG ORDER
-//       Causes it to process incorrectly
-
-// TODO: Suspend the threads of the players when it is someone else's turn (block the inputs from the players)
-// TODO: Develop a protocol that handles when clients leave the game without informing the server
-// TODO: After suspending the threads, create a mechanism that avoid the deadlock
-// TODO: Sketch the architecture and the protocols for the game (e.g. client requesting to have their turn)
-
 public class YahtzeeServer extends Thread {
     private ServerSocket socket;
     private int playerNumber = 0;

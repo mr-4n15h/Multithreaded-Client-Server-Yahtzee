@@ -7,10 +7,6 @@ import constants.ServerOperationConstants;
 import java.util.Arrays;
 import java.util.List;
 
-// TODO: Fix the protocol
-//       Record each operation
-
-
 class ServerOperation {
     private List<Player> players;
 
