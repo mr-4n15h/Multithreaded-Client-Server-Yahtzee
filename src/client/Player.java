@@ -7,7 +7,7 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Arrays;
 
-public class Player extends Thread {
+public class Player implements Runnable {
     private PlayerScoreBoard scoreBoard;
     private Socket socket;
     private ObjectOutputStream output;
@@ -26,10 +26,10 @@ public class Player extends Thread {
         this.scoreCheck = new ScoreCheck(dices);
     }
 
-    public Player(Socket socket, ObjectOutputStream output, ObjectInputStream input) {
-        this(socket);
-        this.output = output;
-        this.input = input;
+    @Override
+    public void run() {
+        System.out.println(Thread.currentThread().getName() + " says hi!");
+
     }
 
     public void setTurnManager(TurnManager turnManager) {
@@ -72,7 +72,6 @@ public class Player extends Thread {
         return null;
     }
 
-
     public String getScoreBoard() {
         return scoreBoard.toString();
     }
@@ -104,7 +103,6 @@ public class Player extends Thread {
 
     public void setPlayerName(String name) {
         this.playerName = name;
-        setName(playerName);
     }
 
     public String getPlayerName() {

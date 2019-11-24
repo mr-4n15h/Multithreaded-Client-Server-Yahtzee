@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.InputMismatchException;
 import java.util.Scanner;
 
-public class YahtzeeClient {
+public class YahtzeeClient extends Thread {
     private ObjectInputStream input;
     private ObjectOutputStream output;
     private Scanner inputKeyboard;
@@ -27,9 +27,13 @@ public class YahtzeeClient {
         input = new ObjectInputStream(socketConnection.getInputStream());
         inputKeyboard = new Scanner(System.in);
         categoriesToScore = new ArrayList<>();
-        runClient();
+        start();
     }
 
+    @Override
+    public void run() {
+        runClient();
+    }
 
     public void runClient() {
         try {
@@ -54,7 +58,6 @@ public class YahtzeeClient {
     }
 
     private void respondToServerOperations() throws IOException, ClassNotFoundException {
-        while(!gameHasEnded) {
             String operationFromServer = (String) input.readObject();
             switch(operationFromServer) {
                 case ServerOperationConstants.ROUND_NUMBER:
@@ -101,7 +104,6 @@ public class YahtzeeClient {
                     System.out.println(operationFromServer);
                     break;
             }
-        }
     }
 
     private boolean chooseRerollOption() {

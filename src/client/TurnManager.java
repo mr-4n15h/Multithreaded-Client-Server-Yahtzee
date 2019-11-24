@@ -3,10 +3,10 @@ package client;
 public class TurnManager {
     // These values are shared amongst the players
     // Each player thread will access these values
-    private boolean isAccessing;
+    private volatile boolean isAccessing;
 
-    private int playerIndex;
-    private final int MAX_NUMBER_OF_PLAYERS;
+    private volatile int playerIndex;
+    private  final int MAX_NUMBER_OF_PLAYERS;
 
     public TurnManager(int playersInGame) {
         this.isAccessing = false;
@@ -21,11 +21,9 @@ public class TurnManager {
     }
 
     public synchronized void requestTurn() throws InterruptedException {
-        Thread me = Thread.currentThread();
         while(isAccessing) {
             wait();
         }
-        System.out.println(me.getName());
         isAccessing = true;
     }
 

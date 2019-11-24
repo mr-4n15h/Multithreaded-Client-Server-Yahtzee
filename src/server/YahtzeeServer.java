@@ -20,7 +20,7 @@ public class YahtzeeServer extends Thread {
     private Scanner inputKeyboard;
 
     // The players
-    private List<Player> players;
+    private final List<Player> players;
     private String startGameOrNotOption = "";
     private boolean startGame;
     private Broadcast broadcast;
@@ -121,9 +121,17 @@ public class YahtzeeServer extends Thread {
     private void startPlayers() {
         turnManager = new TurnManager(players.size());
         // Start the thread of each player
-        for(Player player : players) {
-            player.setTurnManager(turnManager);
-            player.start();
+        synchronized (players) {
+            for(Player player : players) {
+                player.setTurnManager(turnManager);
+                Thread t = new Thread(player);
+                t.start();
+                try {
+                    t.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -137,6 +145,11 @@ public class YahtzeeServer extends Thread {
             serverOperation.sendPlayersScoreBoard();
 
             while(true) {
+                try {
+                    turnManager.requestTurn();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 // Get the index of whose turn it is now
                 int playerTurnIndex = turnManager.getPlayerTurn();
 
@@ -152,8 +165,9 @@ public class YahtzeeServer extends Thread {
                 // Let the player have their turn
                 // Lock to prevent from multiple threads accessing and modifying the player index
                 // Let the player have their turn
-                serverOperation.grantPlayerTurn(player);
 
+                serverOperation.grantPlayerTurn(player);
+                turnManager.releaseTurn();
 
                 // The user sends the PLAYER_FINISH_TURN message to the server
                 String messageFromClient = player.readMessage();
