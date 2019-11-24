@@ -49,7 +49,6 @@ public class YahtzeeServer extends Thread {
                 serverOperation = new ServerOperation(players);
                 broadcast = new Broadcast(players);
                 serverOperation.welcomePlayers();
-                //serverOperation.sendPlayersScoreBoard();
                 startGame();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -101,8 +100,8 @@ public class YahtzeeServer extends Thread {
             players.get(playerNumber).setOutputStream(outputStream);
             players.get(playerNumber).setPlayerNumber(playerNumber + 1);
             players.get(playerNumber).setPlayerName("Player " + (playerNumber + 1));
+            new Thread(players.get(playerNumber)).start();
             String message = "You are Player " + (++playerNumber);
-
             outputStream.writeObject(message);
             System.out.println("Total players in game: " + playerNumber);
         }
@@ -118,26 +117,19 @@ public class YahtzeeServer extends Thread {
         return startGameOrNotOption.equals("y");
     }
 
-    private void startPlayers() {
+    private void initialiseSharedObject() {
         turnManager = new TurnManager(players.size());
         // Start the thread of each player
         synchronized (players) {
             for(Player player : players) {
                 player.setTurnManager(turnManager);
-                Thread t = new Thread(player);
-                t.start();
-                try {
-                    t.join();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
             }
         }
     }
 
     private synchronized void startGame() {
         int totalAcks = 0;
-        startPlayers();
+        initialiseSharedObject();
         for(int roundNumber = 1; roundNumber <= 13; ) {
             // Send the round number to all the players
             broadcast.broadcastPlayersRoundNumber(roundNumber);
@@ -165,19 +157,17 @@ public class YahtzeeServer extends Thread {
                 // Let the player have their turn
                 // Lock to prevent from multiple threads accessing and modifying the player index
                 // Let the player have their turn
-
                 serverOperation.grantPlayerTurn(player);
                 turnManager.releaseTurn();
-
                 // The user sends the PLAYER_FINISH_TURN message to the server
                 String messageFromClient = player.readMessage();
                 System.out.println(messageFromClient + " from " + player.getPlayerName());
-                if (messageFromClient.equals(ServerOperationConstants.PLAYER_FINISH_TURN)) {
+                if(messageFromClient.equals(ServerOperationConstants.PLAYER_FINISH_TURN)) {
                     totalAcks++;
                     System.out.println("-----------End Transaction-----------\n");
                 }
 
-                if (totalAcks == players.size()) {
+                if(totalAcks == players.size()) {
                     System.out.println("Got all acks for round " + roundNumber);
                     totalAcks = 0;
                     broadcast.broadcastPlayerScoreTotal();
@@ -186,7 +176,6 @@ public class YahtzeeServer extends Thread {
                 }
             }
         }
-       // }
         broadcast.declareWinner();
     }
 

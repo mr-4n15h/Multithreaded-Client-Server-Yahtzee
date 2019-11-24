@@ -28,7 +28,7 @@ public class Player implements Runnable {
 
     @Override
     public void run() {
-        System.out.println(Thread.currentThread().getName() + " says hi!");
+        System.out.println(playerName + " started!");
 
     }
 
