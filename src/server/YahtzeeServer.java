@@ -100,7 +100,6 @@ public class YahtzeeServer extends Thread {
             players.get(playerNumber).setOutputStream(outputStream);
             players.get(playerNumber).setPlayerNumber(playerNumber + 1);
             players.get(playerNumber).setPlayerName("Player " + (playerNumber + 1));
-            new Thread(players.get(playerNumber)).start();
             String message = "You are Player " + (++playerNumber);
             outputStream.writeObject(message);
             System.out.println("Total players in game: " + playerNumber);
@@ -123,6 +122,13 @@ public class YahtzeeServer extends Thread {
         synchronized (players) {
             for(Player player : players) {
                 player.setTurnManager(turnManager);
+                Thread t = new Thread(player);
+                t.start();
+                try {
+                    t.join();
+                } catch(InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }

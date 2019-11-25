@@ -29,7 +29,16 @@ public class Player implements Runnable {
     @Override
     public void run() {
         System.out.println(playerName + " started!");
+        boolean running = true;
+        Thread t = new Thread() {
+            @Override
+            public void run() {
+                while(running) {
+                }
+            }
+        };
 
+        t.start();
     }
 
     public void setTurnManager(TurnManager turnManager) {
