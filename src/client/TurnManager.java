@@ -3,10 +3,10 @@ package client;
 public class TurnManager {
     // These values are shared amongst the players
     // Each player thread will access these values
-    private volatile boolean isAccessing;
+    private boolean isAccessing;
 
-    private volatile int playerIndex;
-    private  final int MAX_NUMBER_OF_PLAYERS;
+    private int playerIndex;
+    private final int MAX_NUMBER_OF_PLAYERS;
 
     public TurnManager(int playersInGame) {
         this.isAccessing = false;

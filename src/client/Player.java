@@ -28,15 +28,13 @@ public class Player implements Runnable {
 
     @Override
     public void run() {
-        System.out.println(playerName + " started!");
+        System.out.println(playerName + " thread started!");
         boolean running = true;
-        Thread t = new Thread() {
-            @Override
-            public void run() {
-                while(running) {
-                }
+        Thread t = new Thread(() -> {
+            while(running) {
+                // Run the thread forever, and ever, and ever...
             }
-        };
+        });
 
         t.start();
     }

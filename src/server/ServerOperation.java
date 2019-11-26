@@ -9,9 +9,11 @@ import java.util.List;
 
 class ServerOperation {
     private List<Player> players;
+    private Broadcast broadcast;
 
     ServerOperation(List<Player> players) {
         this.players = players;
+        this.broadcast = new Broadcast(players);
     }
 
     void welcomePlayers() {
@@ -61,7 +63,6 @@ class ServerOperation {
 
     private void letPlayerRerollDices(Player player) {
         boolean rerollingDices = true;
-        final Broadcast broadcast = new Broadcast(players);
         int rerollChances = 3;
 
         player.sendMessage(ServerOperationConstants.PLAYER_REROLL_DICES);
@@ -71,62 +72,69 @@ class ServerOperation {
             System.out.println("Waiting for a message from " + player.getPlayerName());
             String messageFromPlayer = player.readMessage();
             System.out.println(messageFromPlayer + " from " + player.getPlayerName());
-
-            // Player has finished rerolling dice
-            if(messageFromPlayer.equals(ServerOperationConstants.PLAYER_FINISH_REROLL_DICES)) {
-                broadcast.broadcastMessage(player, player.getPlayerName()+ " finished rerolling\n");
-                rerollingDices = false;
-
-                // Here the player has rerolled dice again
-            } else if(messageFromPlayer.equals(ServerOperationConstants.PLAYER_REROLLED_DICES)) {
-                rerollChances--;
-                broadcast.broadcastMessage(player, player.getPlayerName() + " rerolled and has " + rerollChances + " chances to reroll");
-
-                // Player
-            } else if(messageFromPlayer.equals(ServerOperationConstants.PLAYER_NUMBER_OF_DICES_REROLLED)) {
-                String numberOfDicesToReroll = player.readMessage();
-                int[] dicesIndexToReroll = player.readArrayMessage();
-                player.getDices().rerollDices(dicesIndexToReroll);
-                broadcast.broadcastMessage(player, player.getPlayerName() + " chose " + numberOfDicesToReroll + " dice(s) to reroll");
-                broadcast.broadcastMessage(player, player.getPlayerName() + " chose " + Arrays.toString(dicesIndexToReroll) + " dice index(es) to reroll");
-                player.getDices().rerollDices(dicesIndexToReroll);
-
-                // Obtain the new rerolled dices
-                final String NEW_REROLLED_DICES = Arrays.toString(player.getDices().getRolledDices());
-
-                // Send the player the newly rerolled dices
-                player.sendMessage(ServerOperationConstants.PLAYER_NEW_REROLLED_DICE);
-                player.sendMessage(NEW_REROLLED_DICES);
-
-                // Send the rerolled dices to every players
-                broadcast.broadcastMessage(player, ServerOperationConstants.OTHER_PLAYER_REROLL_DICES);
-                broadcast.broadcastMessage(player, "After rerolling, " + player.getPlayerName() + "'s new dices are " + NEW_REROLLED_DICES);
-
-                // Player has requested what they can score in (the category)
-            } else if(messageFromPlayer.equals(ServerOperationConstants.PLAYER_GET_WHAT_CAN_BE_SCORED)) {
-                final String WHAT_CAN_BE_SCORED = player.getWhatCanBeScored();
-                player.sendMessage(WHAT_CAN_BE_SCORED);
-
-                broadcast.broadcastMessage(player, ServerOperationConstants.OTHER_PLAYER_GET_WHAT_CAN_BE_SCORED);
-                broadcast.broadcastMessage(player, player.getPlayerName() + " can score in the following: " + WHAT_CAN_BE_SCORED);
-
-                // Player has finished their turn
-            } else if(messageFromPlayer.equals(ServerOperationConstants.PLAYER_FINISH_TURN)) {
-                System.out.println(messageFromPlayer);
-            } else if(messageFromPlayer.equals(ServerOperationConstants.PLAYER_CHOOSE_SCORING_CATEGORY)) {
-                String categoryChosenByPlayer = player.readMessage();
-
-                int pointScored = player.getCategoryScoredPoint(categoryChosenByPlayer);
-                final String NAME_OF_CATEGORY_CHOSEN = ScoreType.getScoreType(categoryChosenByPlayer).getName();
-
-                player.setScore(ScoreType.getScoreType(categoryChosenByPlayer), pointScored);
-                System.out.println("Scored point: " + pointScored);
-                System.out.println(player.getPlayerName() + " picked to score in " + NAME_OF_CATEGORY_CHOSEN);
-                System.out.println("Player's new scoreboard: " + player.getScoreBoard());
-
-                broadcast.broadcastMessage(player, ServerOperationConstants.OTHER_PLAYER_CHOSE_SCORING_CATEGORY);
-                broadcast.broadcastMessage(player, player.getPlayerName() + " chose to score in " + NAME_OF_CATEGORY_CHOSEN + " giving them " + pointScored + " points");
+            switch (messageFromPlayer) {
+                case ServerOperationConstants.PLAYER_FINISH_REROLL_DICES:
+                    broadcast.broadcastMessage(player, player.getPlayerName() + " finished rerolling\n");
+                    rerollingDices = false;
+                    break;
+                case ServerOperationConstants.PLAYER_REROLLED_DICES:
+                    rerollChances--;
+                    broadcast.broadcastMessage(player, player.getPlayerName() + " rerolled and has " + rerollChances + " chances to reroll");
+                    break;
+                case ServerOperationConstants.PLAYER_NUMBER_OF_DICES_REROLLED:
+                    rerollDice(player);
+                    break;
+                case ServerOperationConstants.PLAYER_GET_WHAT_CAN_BE_SCORED:
+                    displayWhatCanBeScored(player);
+                    break;
+                case ServerOperationConstants.PLAYER_FINISH_TURN:
+                    System.out.println(messageFromPlayer);
+                    break;
+                case ServerOperationConstants.PLAYER_CHOOSE_SCORING_CATEGORY:
+                    updateCategoryChosen(player);
+                    break;
             }
         }
+    }
+
+    private void rerollDice(Player player) {
+        String numberOfDicesToReroll = player.readMessage();     // Get the number of dice to reroll
+        int[] dicesIndexToReroll = player.readArrayMessage();	 // Get the dice indexes to change
+        player.getDices().rerollDices(dicesIndexToReroll);		//  Reroll dice by passing the indexes
+        broadcast.broadcastMessage(player, player.getPlayerName() + " chose " + numberOfDicesToReroll + " dice(s) to reroll");
+        broadcast.broadcastMessage(player, player.getPlayerName() + " chose " + Arrays.toString(dicesIndexToReroll) + " dice index(es) to reroll");
+
+        // Obtain the new rerolled dices
+        final String NEW_REROLLED_DICES = Arrays.toString(player.getDices().getRolledDices());
+        // Send the player the newly rerolled dices
+        player.sendMessage(ServerOperationConstants.PLAYER_NEW_REROLLED_DICE);
+        player.sendMessage(NEW_REROLLED_DICES);
+        // Send the rerolled dices to every players
+        broadcast.broadcastMessage(player, ServerOperationConstants.OTHER_PLAYER_REROLL_DICES);
+        broadcast.broadcastMessage(player, "After rerolling, " + player.getPlayerName() + "'s new dices are " + NEW_REROLLED_DICES);
+    }
+
+    private void displayWhatCanBeScored(Player player) {
+        final String WHAT_CAN_BE_SCORED = player.getWhatCanBeScored();
+        player.sendMessage(WHAT_CAN_BE_SCORED);
+        // Inform other players what the user can score in
+        broadcast.broadcastMessage(player, ServerOperationConstants.OTHER_PLAYER_GET_WHAT_CAN_BE_SCORED);
+        broadcast.broadcastMessage(player, player.getPlayerName() + " can score in the following: " + WHAT_CAN_BE_SCORED);
+    }
+
+    private void updateCategoryChosen(Player player) {
+        String categoryChosenByPlayer = player.readMessage();
+        int pointScored = player.getCategoryScoredPoint(categoryChosenByPlayer);
+        final String NAME_OF_CATEGORY_CHOSEN = ScoreType.getScoreType(categoryChosenByPlayer).getName();
+        player.setScore(ScoreType.getScoreType(categoryChosenByPlayer), pointScored);
+        updatePlayersCategoryChosen(player, NAME_OF_CATEGORY_CHOSEN, pointScored);
+    }
+
+    private void updatePlayersCategoryChosen(Player player, String categoryChosen, int pointScored) {
+        System.out.println("Scored point: " + pointScored);
+        System.out.println(player.getPlayerName() + " picked to score in " + categoryChosen);
+        System.out.println("Player's new scoreboard: " + player.getScoreBoard());
+        broadcast.broadcastMessage(player, ServerOperationConstants.OTHER_PLAYER_CHOSE_SCORING_CATEGORY);
+        broadcast.broadcastMessage(player, player.getPlayerName() + " chose to score in " + categoryChosen + " giving them " + pointScored + " points");
     }
 }

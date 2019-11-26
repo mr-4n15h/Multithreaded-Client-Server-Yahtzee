@@ -25,7 +25,6 @@ public class YahtzeeServer extends Thread {
     private boolean startGame;
     private Broadcast broadcast;
     private ServerOperation serverOperation;
-    //private PlayerTurnManager playerTurnManager;
     private TurnManager turnManager;
 
     private YahtzeeServer(int portNumber) throws IOException {
@@ -66,6 +65,7 @@ public class YahtzeeServer extends Thread {
                     System.out.println("The game contains " + playerNumber + " players.");
                     break;
                 } else {
+                    System.out.println("Waiting for one more client");
                     startGameOrNotOption = "";
                 }
             }
@@ -74,17 +74,14 @@ public class YahtzeeServer extends Thread {
     }
 
     private void acceptPlayerConnection() throws IOException {
-        // The server will need to accept the connection of client
-        // even if the game has started
-        // If the game has started, then send a message to the client
-        // informing them the game has started and they cannot join session
-        players.add(new Player(socket.accept()));
+        Player player = new Player(socket.accept());
 
-        Socket connectionSocket =  players.get(playerNumber).getSocket();
+        Socket connectionSocket =  player.getSocket();
         if(!startGame)
             System.out.println("Accepted a connection from " + connectionSocket.getInetAddress() + ":" + connectionSocket.getPort() + " at port " + connectionSocket.getLocalPort());
         else
             System.out.println("Game has started, but a client has been denied to join the game from" + connectionSocket.getInetAddress() + ":" + connectionSocket.getPort() + " at port " + connectionSocket.getLocalPort());
+
         ObjectOutputStream outputStream = new ObjectOutputStream(connectionSocket.getOutputStream());
         ObjectInputStream inputStream = new ObjectInputStream(connectionSocket.getInputStream());
 
@@ -93,8 +90,8 @@ public class YahtzeeServer extends Thread {
         if(playerNumber >= 3 && startGame) {
             String message = "Cannot join game, as game is currently being played. Please try again later.";
             outputStream.writeObject(message);
-            players.remove(players.size()-1);
         } else {
+            players.add(player);
             // Write the player number to the client
             players.get(playerNumber).setInputStream(inputStream);
             players.get(playerNumber).setOutputStream(outputStream);
@@ -119,6 +116,10 @@ public class YahtzeeServer extends Thread {
     private void initialiseSharedObject() {
         turnManager = new TurnManager(players.size());
         // Start the thread of each player
+        startPlayers();
+    }
+
+    private void startPlayers() {
         synchronized (players) {
             for(Player player : players) {
                 player.setTurnManager(turnManager);
@@ -143,45 +144,48 @@ public class YahtzeeServer extends Thread {
             serverOperation.sendPlayersScoreBoard();
 
             while(true) {
-                try {
-                    turnManager.requestTurn();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                // Get the index of whose turn it is now
-                int playerTurnIndex = turnManager.getPlayerTurn();
+                synchronized(players) {
+                    // Get the index of whose turn it is now
+                    int playerTurnIndex = turnManager.getPlayerTurn();
 
-                // The player who will communicate with the server
-                Player player = players.get(playerTurnIndex);
+                    // The player who will communicate with the server
+                    Player player = players.get(playerTurnIndex);
 
-                // Inform each player whose turn it is right now
-                broadcast.broadcastMessage(player, ServerOperationConstants.OTHER_PLAYER_TURN);
-                broadcast.broadcastMessage(player, player.getPlayerName());
+                    // Inform each player whose turn it is right now
+                    broadcast.broadcastMessage(player, ServerOperationConstants.OTHER_PLAYER_TURN);
+                    broadcast.broadcastMessage(player, player.getPlayerName());
 
-                System.out.println("-----------Begin Transaction-----------");
-                System.out.println("Synchronised player index number: " + turnManager.getPlayerTurn());
-                // Let the player have their turn
-                // Lock to prevent from multiple threads accessing and modifying the player index
-                // Let the player have their turn
-                serverOperation.grantPlayerTurn(player);
-                turnManager.releaseTurn();
-                // The user sends the PLAYER_FINISH_TURN message to the server
-                String messageFromClient = player.readMessage();
-                System.out.println(messageFromClient + " from " + player.getPlayerName());
-                if(messageFromClient.equals(ServerOperationConstants.PLAYER_FINISH_TURN)) {
-                    totalAcks++;
-                    System.out.println("-----------End Transaction-----------\n");
-                }
+                    System.out.println("-----------Begin Transaction-----------");
+                    System.out.println("Synchronised player index number: " + turnManager.getPlayerTurn());
+                    // Let the player have their turn
+                    // Lock to prevent from multiple threads accessing and modifying the player index
+                    try {
+                        player.getTurnManager().requestTurn();
+                        serverOperation.grantPlayerTurn(player);
+                        player.getTurnManager().releaseTurn();
+                    } catch(InterruptedException e) {
+                        e.printStackTrace();
+                    }
 
-                if(totalAcks == players.size()) {
-                    System.out.println("Got all acks for round " + roundNumber);
-                    totalAcks = 0;
-                    broadcast.broadcastPlayerScoreTotal();
-                    roundNumber++;
-                    break;
+                    // The user sends the PLAYER_FINISH_TURN message to the server
+                    String messageFromClient = player.readMessage();
+                    System.out.println(messageFromClient + " from " + player.getPlayerName());
+                    if(messageFromClient.equals(ServerOperationConstants.PLAYER_FINISH_TURN)) {
+                        totalAcks++;
+                        System.out.println("-----------End Transaction-----------\n");
+                    }
+
+                    if(totalAcks == players.size()) {
+                        System.out.println("Got all acks for round " + roundNumber);
+                        totalAcks = 0;
+                        broadcast.broadcastPlayerScoreTotal();
+                        roundNumber++;
+                        break;
+                    }
                 }
             }
         }
+        // Inform each player who the winner is
         broadcast.declareWinner();
     }
 
